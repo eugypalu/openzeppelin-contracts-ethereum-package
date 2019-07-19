@@ -11,6 +11,11 @@ cleanup() {
   if [ -n "$ganache_pid" ] && ps -p $ganache_pid > /dev/null; then
     kill -9 $ganache_pid
   fi
+
+  # Kill the GSN relay server that we started (if we started one and if it's still running).
+  if [ -n "$gsn_relay_server_pid" ] && ps -p $gsn_relay_server_pid > /dev/null; then
+    kill -9 $gsn_relay_server_pid
+  fi
 }
 
 if [ "$SOLIDITY_COVERAGE" = true ]; then
@@ -18,6 +23,8 @@ if [ "$SOLIDITY_COVERAGE" = true ]; then
 else
   ganache_port=8545
 fi
+
+node_url="http://localhost:$ganache_port"
 
 ganache_running() {
   nc -z localhost "$ganache_port"
@@ -47,6 +54,20 @@ start_ganache() {
   ganache_pid=$!
 }
 
+setup_gsn_relay() {
+  npx oz-gsn deploy-relay-hub --ethereumNodeURL $node_url
+
+  echo "Launching GSN relay server"
+
+  server_url="http://localhost:8090"
+  ./scripts/gsnRelayServer -DevMode -ShortSleep -RelayHubAddress "0x537F27a04470242ff6b2c3ad247A05248d0d27CE" -GasPricePercent -99 -EthereumNodeUrl $node_url -Url $server_url &> /dev/null &
+  gsn_relay_server_pid=$!
+
+  echo "GSN relay server launched!"
+
+  npx oz-gsn register-relayer --ethereumNodeURL $node_url --relayUrl $server_url
+}
+
 if ganache_running; then
   echo "Using existing ganache instance"
 else
@@ -54,12 +75,9 @@ else
   start_ganache
 fi
 
-if [ "$SOLC_NIGHTLY" = true ]; then
-  echo "Downloading solc nightly"
-  wget -q https://raw.githubusercontent.com/ethereum/solc-bin/gh-pages/bin/soljson-nightly.js -O /tmp/soljson.js && find . -name soljson.js -exec cp /tmp/soljson.js {} \;
-fi
+setup_gsn_relay
 
-truffle version
+npx truffle version
 
 if [ "$SOLIDITY_COVERAGE" = true ]; then
   node_modules/.bin/solidity-coverage
