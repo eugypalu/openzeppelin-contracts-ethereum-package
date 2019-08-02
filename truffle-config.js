@@ -51,4 +51,8 @@ module.exports = {
       version: '0.5.2',
     },
   },
+
+  mocha: {
+    bail: true
+  }
 };

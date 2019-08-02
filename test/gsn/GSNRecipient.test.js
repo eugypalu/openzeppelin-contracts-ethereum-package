@@ -1,4 +1,4 @@
-const { balance, ether, expectEvent, expectRevert } = require('openzeppelin-test-helpers');
+const { balance, ether, expectEvent, shouldFail } = require('openzeppelin-test-helpers');
 const gsn = require('@openzeppelin/gsn-helpers');
 
 const { expect } = require('chai');
@@ -8,6 +8,7 @@ const GSNRecipientMock = artifacts.require('GSNRecipientMock');
 contract('GSNContext', function ([_, payee]) {
   beforeEach(async function () {
     this.recipient = await GSNRecipientMock.new();
+    await this.recipient.initialize();
   });
 
   it('returns the RelayHub address address', async function () {
@@ -26,23 +27,32 @@ contract('GSNContext', function ([_, payee]) {
     });
 
     it('funds can be withdrawn', async function () {
-      const balanceTracker = await balance.tracker(payee);
-      const { logs } = await this.recipient.withdrawDeposits(amount, payee);
-      expect(await balanceTracker.delta()).to.be.bignumber.equal(amount);
+      expect(await balance.difference(payee, () => 
+        this.recipient.withdrawDeposits(amount, payee))
+      ).to.be.bignumber.equal(amount);
+    });
 
+    it('logs when funds are withdrawn', async function () {
+      const { logs }  = await this.recipient.withdrawDeposits(amount, payee);
       expectEvent.inLogs(logs, 'GSNDepositsWithdrawn', { amount, payee });
     });
 
     it('partial funds can be withdrawn', async function () {
-      const balanceTracker = await balance.tracker(payee);
-      const { logs } = await this.recipient.withdrawDeposits(amount.divn(2), payee);
-      expect(await balanceTracker.delta()).to.be.bignumber.equal(amount.divn(2));
+      expect(await balance.difference(payee, async () => 
+        this.recipient.withdrawDeposits(amount.divn(2), payee))
+      ).to.be.bignumber.equal(amount.divn(2));
+    });
 
+    it('logs when partial funds are withdrawn', async function () {
+      const { logs } = await this.recipient.withdrawDeposits(amount.divn(2), payee);
       expectEvent.inLogs(logs, 'GSNDepositsWithdrawn', { amount: amount.divn(2), payee });
     });
 
     it('reverts on overwithdrawals', async function () {
-      await expectRevert(this.recipient.withdrawDeposits(amount.addn(1), payee), 'insufficient funds');
+      await shouldFail.reverting(
+        this.recipient.withdrawDeposits(amount.addn(1), payee)
+        // , 'insufficient funds'
+      );
     });
   });
 });
