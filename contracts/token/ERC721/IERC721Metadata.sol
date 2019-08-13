@@ -10,5 +10,7 @@ import "./IERC721.sol";
 contract IERC721Metadata is Initializable, IERC721 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
+    function price() external view returns (uint256);
+    function info() external view returns (bytes32);
     function tokenURI(uint256 tokenId) external view returns (string memory);
 }

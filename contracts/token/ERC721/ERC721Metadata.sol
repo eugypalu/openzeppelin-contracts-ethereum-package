@@ -12,6 +12,13 @@ contract ERC721Metadata is Initializable, ERC165, ERC721, IERC721Metadata {
     // Token symbol
     string private _symbol;
 
+    //token  price
+    uint256 private _price;
+
+    //token info
+    //potremmo tenere le altre info fuori e linkarle
+    bytes32 _ipfsInfo;
+
     // Optional mapping for token URIs
     mapping(uint256 => string) private _tokenURIs;
 
@@ -26,11 +33,13 @@ contract ERC721Metadata is Initializable, ERC165, ERC721, IERC721Metadata {
     /**
      * @dev Constructor function
      */
-    function initialize(string memory name, string memory symbol) public initializer {
+    function initialize(string memory name, string memory symbol, uint256 tokenPrice, bytes32 tokenInfo) public initializer {
         require(ERC721._hasBeenInitialized());
 
         _name = name;
         _symbol = symbol;
+        _price = tokenPrice;
+        _ipfsInfo = tokenInfo;
 
         // register the supported interfaces to conform to ERC721 via ERC165
         _registerInterface(_INTERFACE_ID_ERC721_METADATA);
@@ -54,6 +63,22 @@ contract ERC721Metadata is Initializable, ERC165, ERC721, IERC721Metadata {
      */
     function symbol() external view returns (string memory) {
         return _symbol;
+    }
+
+    /**
+     * @dev Gets the token price
+     * @return string representing the token price
+     */
+    function price() external view returns (uint256) {
+        return _price;
+    }
+
+    /**
+     * @dev Gets the token info
+     * @return string representing the token info
+     */
+    function info() external view returns (bytes32) {
+        return _ipfsInfo;
     }
 
     /**
